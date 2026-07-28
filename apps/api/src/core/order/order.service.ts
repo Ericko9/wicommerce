@@ -94,7 +94,7 @@ export class OrderService {
             deletedAt: null,
           },
           include: {
-            variants: { take: 1 },
+            variants: true,
           },
         });
 
@@ -102,10 +102,21 @@ export class OrderService {
           throw new NotFoundException(`Produk ID '${itemDto.productId}' tidak ditemukan atau tidak aktif`);
         }
 
+        let selectedVariant: any = null;
+        if (itemDto.variantId) {
+          selectedVariant = product.variants.find((v) => v.id === itemDto.variantId);
+          if (!selectedVariant) {
+            throw new NotFoundException(`Varian ID '${itemDto.variantId}' tidak ditemukan untuk produk '${product.name}'`);
+          }
+        } else {
+          selectedVariant = product.variants[0] || null;
+        }
+
         const inv = await tx.inventoryItem.findFirst({
           where: {
             tenantId,
             productId: product.id,
+            variantId: selectedVariant?.id || null,
             warehouseId,
           },
         });
@@ -113,18 +124,26 @@ export class OrderService {
         const currentStock = inv ? inv.quantity : 0;
         if (currentStock < itemDto.quantity) {
           throw new BadRequestException(
-            `Stok untuk produk '${product.name}' tidak mencukupi (Tersedia: ${currentStock}, Diminta: ${itemDto.quantity})`,
+            `Stok untuk produk '${product.name}' ${selectedVariant ? `(${selectedVariant.name})` : ''} tidak mencukupi (Tersedia: ${currentStock}, Diminta: ${itemDto.quantity})`,
           );
         }
 
-        const itemSubtotal = product.basePrice * itemDto.quantity;
+        const unitPrice = selectedVariant?.price !== null && selectedVariant?.price !== undefined
+          ? selectedVariant.price
+          : product.basePrice;
+
+        const itemSubtotal = unitPrice * itemDto.quantity;
         subtotal += itemSubtotal;
+
+        const productNameSnapshot = selectedVariant
+          ? `${product.name} - ${selectedVariant.name}`
+          : product.name;
 
         orderItemsData.push({
           productId: product.id,
-          variantId: product.variants[0]?.id || null,
-          productNameSnapshot: product.name,
-          priceSnapshot: product.basePrice,
+          variantId: selectedVariant?.id || null,
+          productNameSnapshot,
+          priceSnapshot: unitPrice,
           quantity: itemDto.quantity,
           subtotal: itemSubtotal,
         });
@@ -344,6 +363,7 @@ export class OrderService {
               where: {
                 tenantId,
                 productId: item.productId,
+                variantId: item.variantId || null,
                 warehouseId: defaultWarehouse.id,
               },
             });

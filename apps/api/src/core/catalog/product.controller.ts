@@ -6,7 +6,9 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { FeatureFlagGuard } from '../../common/guards/feature-flag.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireFeature } from '../../common/decorators/require-feature.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { TenantRole } from '@ucp/database';
@@ -138,5 +140,69 @@ export class ProductController {
   ) {
     const tenantId = tenant?.id || user?.tenantId;
     return this.productService.deleteProductImage(tenantId, id, imageId);
+  }
+
+  // =========================================
+  // PRODUCT VARIANTS (Requires 'product_variants' feature)
+  // =========================================
+
+  @Get(':id/variants')
+  @RequireFeature('product_variants')
+  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
+  @Roles(TenantRole.OWNER, TenantRole.ADMIN, TenantRole.STAFF)
+  @ApiOperation({ summary: 'Get list of product variants' })
+  async getVariants(
+    @Param('id') id: string,
+    @CurrentTenant() tenant: any,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    const tenantId = tenant?.id || user?.tenantId;
+    return this.productService.getVariants(tenantId, id);
+  }
+
+  @Post(':id/variants')
+  @RequireFeature('product_variants')
+  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
+  @Roles(TenantRole.OWNER, TenantRole.ADMIN)
+  @ApiOperation({ summary: 'Create new product variant' })
+  async createVariant(
+    @Param('id') id: string,
+    @Body() dto: import('./dto/variant.dto').CreateVariantDto,
+    @CurrentTenant() tenant: any,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    const tenantId = tenant?.id || user?.tenantId;
+    return this.productService.createVariant(tenantId, id, dto);
+  }
+
+  @Patch(':id/variants/:variantId')
+  @RequireFeature('product_variants')
+  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
+  @Roles(TenantRole.OWNER, TenantRole.ADMIN)
+  @ApiOperation({ summary: 'Update product variant' })
+  async updateVariant(
+    @Param('id') id: string,
+    @Param('variantId') variantId: string,
+    @Body() dto: import('./dto/variant.dto').UpdateVariantDto,
+    @CurrentTenant() tenant: any,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    const tenantId = tenant?.id || user?.tenantId;
+    return this.productService.updateVariant(tenantId, id, variantId, dto);
+  }
+
+  @Delete(':id/variants/:variantId')
+  @RequireFeature('product_variants')
+  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
+  @Roles(TenantRole.OWNER, TenantRole.ADMIN)
+  @ApiOperation({ summary: 'Delete product variant' })
+  async deleteVariant(
+    @Param('id') id: string,
+    @Param('variantId') variantId: string,
+    @CurrentTenant() tenant: any,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    const tenantId = tenant?.id || user?.tenantId;
+    return this.productService.deleteVariant(tenantId, id, variantId);
   }
 }

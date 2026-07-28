@@ -16,6 +16,10 @@ export class CheckoutItemDto {
   @IsNotEmpty()
   productId!: string;
 
+  @IsString()
+  @IsOptional()
+  variantId?: string;
+
   @IsInt()
   @Min(1)
   quantity!: number;

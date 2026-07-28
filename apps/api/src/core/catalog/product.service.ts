@@ -300,4 +300,142 @@ export class ProductService {
       where: { id: imageId },
     });
   }
+
+  // =========================================
+  // PRODUCT VARIANTS (Requires 'product_variants' feature)
+  // =========================================
+
+  async createVariant(tenantId: string, productId: string, dto: import('./dto/variant.dto').CreateVariantDto): Promise<any> {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, tenantId, deletedAt: null },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Produk tidak ditemukan');
+    }
+
+    const existingSku = await this.prisma.productVariant.findUnique({
+      where: {
+        productId_sku: {
+          productId,
+          sku: dto.sku,
+        },
+      },
+    });
+
+    if (existingSku) {
+      throw new ConflictException(`SKU '${dto.sku}' sudah digunakan untuk produk ini`);
+    }
+
+    let defaultWarehouse = await this.prisma.warehouse.findFirst({
+      where: { tenantId, isDefault: true },
+    });
+
+    if (!defaultWarehouse) {
+      defaultWarehouse = await this.prisma.warehouse.create({
+        data: {
+          tenantId,
+          name: 'Gudang Utama',
+          isDefault: true,
+        },
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const variant = await tx.productVariant.create({
+        data: {
+          productId,
+          sku: dto.sku,
+          name: dto.name,
+          price: dto.price !== undefined ? dto.price : null,
+          attributes: dto.attributes ? JSON.parse(JSON.stringify(dto.attributes)) : null,
+        },
+      });
+
+      await tx.inventoryItem.create({
+        data: {
+          tenantId,
+          productId,
+          variantId: variant.id,
+          warehouseId: defaultWarehouse!.id,
+          quantity: dto.initialQuantity || 0,
+        },
+      });
+
+      return tx.productVariant.findUnique({
+        where: { id: variant.id },
+        include: { inventoryItems: true },
+      });
+    });
+  }
+
+  async getVariants(tenantId: string, productId: string): Promise<any> {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, tenantId, deletedAt: null },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Produk tidak ditemukan');
+    }
+
+    return this.prisma.productVariant.findMany({
+      where: { productId },
+      include: { inventoryItems: true },
+    });
+  }
+
+  async updateVariant(
+    tenantId: string,
+    productId: string,
+    variantId: string,
+    dto: import('./dto/variant.dto').UpdateVariantDto,
+  ): Promise<any> {
+    const variant = await this.prisma.productVariant.findFirst({
+      where: {
+        id: variantId,
+        product: { id: productId, tenantId, deletedAt: null },
+      },
+    });
+
+    if (!variant) {
+      throw new NotFoundException('Varian produk tidak ditemukan');
+    }
+
+    if (dto.sku && dto.sku !== variant.sku) {
+      const existing = await this.prisma.productVariant.findUnique({
+        where: { productId_sku: { productId, sku: dto.sku } },
+      });
+      if (existing) {
+        throw new ConflictException(`SKU '${dto.sku}' sudah digunakan`);
+      }
+    }
+
+    return this.prisma.productVariant.update({
+      where: { id: variantId },
+      data: {
+        sku: dto.sku || variant.sku,
+        name: dto.name || variant.name,
+        price: dto.price !== undefined ? dto.price : variant.price,
+        attributes: dto.attributes ? JSON.parse(JSON.stringify(dto.attributes)) : variant.attributes,
+      },
+      include: { inventoryItems: true },
+    });
+  }
+
+  async deleteVariant(tenantId: string, productId: string, variantId: string): Promise<any> {
+    const variant = await this.prisma.productVariant.findFirst({
+      where: {
+        id: variantId,
+        product: { id: productId, tenantId, deletedAt: null },
+      },
+    });
+
+    if (!variant) {
+      throw new NotFoundException('Varian produk tidak ditemukan');
+    }
+
+    return this.prisma.productVariant.delete({
+      where: { id: variantId },
+    });
+  }
 }
