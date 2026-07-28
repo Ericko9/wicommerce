@@ -8,6 +8,7 @@ dist
 out
 build
 *.tsbuildinfo
+.turbo
 
 # Env files
 .env
