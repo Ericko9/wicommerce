@@ -15,6 +15,7 @@ import { InventoryModule } from './core/inventory/inventory.module';
 import { StorefrontCatalogModule } from './core/storefront-catalog/storefront-catalog.module';
 import { CustomerAuthModule } from './core/customer-auth/customer-auth.module';
 import { OrderModule } from './core/order/order.module';
+import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { OrderModule } from './core/order/order.module';
     StorefrontCatalogModule,
     CustomerAuthModule,
     OrderModule,
+    PaymentGatewayModule,
   ],
   controllers: [AppController],
   providers: [AppService],

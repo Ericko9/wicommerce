@@ -6,9 +6,16 @@ import { PrismaService } from '../src/common/prisma/prisma.service';
 import { OrderStatus, ProductStatus } from '@ucp/database';
 import { PaymentMethodType } from '../src/core/order/dto/checkout.dto';
 
+import { PaymentGatewayService } from '../src/modules/payment-gateway/payment-gateway.service';
+
 describe('OrderService Unit Tests', () => {
   let service: OrderService;
   let prisma: any;
+
+  const mockPaymentGatewayService = {
+    createMidtransSnapTransaction: jest.fn(),
+    createXenditInvoiceTransaction: jest.fn(),
+  };
 
   const mockPrisma: any = {
     tenantSetting: {
@@ -54,6 +61,7 @@ describe('OrderService Unit Tests', () => {
         OrderService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: CartService, useValue: mockCartService },
+        { provide: PaymentGatewayService, useValue: mockPaymentGatewayService },
       ],
     }).compile();
 

@@ -9,6 +9,8 @@ import { CheckoutDto } from './dto/checkout.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { OrderStatus, ProductStatus } from '@ucp/database';
 
+import { PaymentGatewayService } from '../../modules/payment-gateway/payment-gateway.service';
+
 export const VALID_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.PENDING_PAYMENT]: [OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.EXPIRED],
   [OrderStatus.PAID]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED, OrderStatus.REFUNDED],
@@ -25,6 +27,7 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cartService: CartService,
+    private readonly paymentGatewayService: PaymentGatewayService,
   ) {}
 
   async createCheckout(tenantId: string, customerId: string | null, dto: CheckoutDto): Promise<any> {
@@ -200,9 +203,16 @@ export class OrderService {
         await this.cartService.clearCart(tenantId, dto.cartId);
       }
 
+      let gatewayResult = null;
+      if (dto.paymentMethod === ('midtrans' as any)) {
+        gatewayResult = await this.paymentGatewayService.createMidtransSnapTransaction(tenantId, order);
+      } else if (dto.paymentMethod === ('xendit' as any)) {
+        gatewayResult = await this.paymentGatewayService.createXenditInvoiceTransaction(tenantId, order);
+      }
+
       return {
         order,
-        paymentInstructions: {
+        paymentInstructions: gatewayResult || {
           method: dto.paymentMethod,
           amount: totalAmount,
           paymentDueAt,

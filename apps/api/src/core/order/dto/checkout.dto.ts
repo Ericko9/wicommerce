@@ -54,6 +54,8 @@ export class ShippingAddressDto {
 export enum PaymentMethodType {
   MANUAL_TRANSFER = 'manual_transfer',
   COD = 'cod',
+  MIDTRANS = 'midtrans',
+  XENDIT = 'xendit',
 }
 
 export class CheckoutDto {
