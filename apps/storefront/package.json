@@ -1,0 +1,27 @@
+{
+  "name": "@ucp/storefront",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'linting storefront'"
+  },
+  "dependencies": {
+    "@ucp/types": "workspace:*",
+    "@ucp/ui": "workspace:*",
+    "@ucp/utils": "workspace:*",
+    "next": "^14.2.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@ucp/config": "workspace:*",
+    "typescript": "^5.4.5"
+  }
+}

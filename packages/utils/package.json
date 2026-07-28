@@ -1,0 +1,16 @@
+{
+  "name": "@ucp/utils",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'linting utils'"
+  },
+  "devDependencies": {
+    "@ucp/config": "workspace:*",
+    "typescript": "^5.4.5"
+  }
+}
