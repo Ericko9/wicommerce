@@ -13,6 +13,8 @@ import { FeatureFlagModule } from './core/feature-flag/feature-flag.module';
 import { CatalogModule } from './core/catalog/catalog.module';
 import { InventoryModule } from './core/inventory/inventory.module';
 import { StorefrontCatalogModule } from './core/storefront-catalog/storefront-catalog.module';
+import { CustomerAuthModule } from './core/customer-auth/customer-auth.module';
+import { OrderModule } from './core/order/order.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { StorefrontCatalogModule } from './core/storefront-catalog/storefront-ca
     CatalogModule,
     InventoryModule,
     StorefrontCatalogModule,
+    CustomerAuthModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
