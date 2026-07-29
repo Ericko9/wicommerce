@@ -1,7 +1,13 @@
 $ next build
   ▲ Next.js 14.2.35
+  - Environments: .env.local
 
    Creating an optimized production build ...
+
+warn - Your `content` configuration includes a pattern which looks like it's accidentally matching all of `node_modules` and can cause serious performance issues.
+warn - Pattern: `../../packages/ui/**/*.js`
+warn - See our documentation for recommendations:
+warn - https://tailwindcss.com/docs/content-configuration#pattern-recommendations
  ✓ Compiled successfully
    Linting and checking validity of types     ✓ Linting and checking validity of types 
    Collecting page data     ✓ Collecting page data 
@@ -10,15 +16,15 @@ $ next build
    Finalizing page optimization     ✓ Finalizing page optimization 
 
 Route (app)                              Size     First Load JS
-┌ ○ /                                    2.65 kB         132 kB
+┌ ○ /                                    2.61 kB         132 kB
 ├ ○ /_not-found                          871 B          88.2 kB
-├ ○ /categories                          4.74 kB         134 kB
-├ ○ /features                            5.09 kB         135 kB
-├ ○ /inventory                           5.11 kB         135 kB
+├ ○ /categories                          4.7 kB          134 kB
+├ ○ /features                            5.05 kB         134 kB
+├ ○ /inventory                           5.07 kB         135 kB
 ├ ○ /login                               25.6 kB         147 kB
-├ ○ /orders                              6.24 kB         136 kB
-├ ○ /products                            6.86 kB         136 kB
-└ ○ /settings                            4.93 kB         134 kB
+├ ○ /orders                              6.2 kB          136 kB
+├ ○ /products                            6.81 kB         136 kB
+└ ○ /settings                            4.89 kB         134 kB
 + First Load JS shared by all            87.3 kB
   ├ chunks/513-3efbc5535df6534f.js       31.7 kB
   ├ chunks/6f1030b3-6ea1cc437aaa43fd.js  53.6 kB

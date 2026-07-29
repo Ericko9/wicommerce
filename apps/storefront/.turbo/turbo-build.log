@@ -1,5 +1,6 @@
 $ next build
   ▲ Next.js 14.2.35
+  - Environments: .env.local
 
    Creating an optimized production build ...
 
@@ -15,12 +16,12 @@ warn - https://tailwindcss.com/docs/content-configuration#pattern-recommendation
    Finalizing page optimization     ✓ Finalizing page optimization 
 
 Route (app)                              Size     First Load JS
-┌ ○ /                                    3.16 kB         132 kB
+┌ ○ /                                    3.12 kB         132 kB
 ├ ○ /_not-found                          871 B          88.2 kB
-├ ○ /cart                                4.52 kB         142 kB
-├ ○ /checkout                            5.34 kB         134 kB
+├ ○ /cart                                4.48 kB         142 kB
+├ ○ /checkout                            5.29 kB         134 kB
 ├ ƒ /orders/[id]                         2.93 kB        99.5 kB
-└ ƒ /products/[slug]                     5.22 kB         134 kB
+└ ƒ /products/[slug]                     5.17 kB         134 kB
 + First Load JS shared by all            87.3 kB
   ├ chunks/513-3efbc5535df6534f.js       31.7 kB
   ├ chunks/6f1030b3-6ea1cc437aaa43fd.js  53.6 kB
