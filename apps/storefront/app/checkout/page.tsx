@@ -60,10 +60,14 @@ export default function CheckoutPage() {
     }
 
     const payload = {
-      customerName: formData.customerName,
-      customerPhone: formData.customerPhone,
-      customerEmail: formData.customerEmail || undefined,
-      shippingAddress: formData.shippingAddress,
+      shippingAddress: {
+        recipient: formData.customerName,
+        phone: formData.customerPhone,
+        fullAddress: formData.shippingAddress,
+        city: 'Jakarta Pusat',
+        province: 'DKI Jakarta',
+        postalCode: '10110',
+      },
       paymentMethod: formData.paymentMethod,
       items: items.map((i: any) => ({
         productId: i.productId,
