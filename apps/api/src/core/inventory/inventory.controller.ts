@@ -19,7 +19,7 @@ export class InventoryController {
   @Get()
   @Roles(TenantRole.OWNER, TenantRole.ADMIN, TenantRole.STAFF)
   @ApiOperation({ summary: 'Get stock per product for admin' })
-  async getInventory(@CurrentTenant() tenant: any, @CurrentUser() user: any) {
+  async getInventory(@CurrentTenant() tenant: any, @CurrentUser() user: any): Promise<any> {
     const tenantId = tenant?.id || user?.tenantId;
     return this.inventoryService.getInventory(tenantId);
   }
@@ -31,7 +31,7 @@ export class InventoryController {
     @Body() dto: AdjustInventoryDto,
     @CurrentTenant() tenant: any,
     @CurrentUser() user: any,
-  ) {
+  ): Promise<any> {
     const tenantId = tenant?.id || user?.tenantId;
     return this.inventoryService.adjustInventory(tenantId, dto);
   }

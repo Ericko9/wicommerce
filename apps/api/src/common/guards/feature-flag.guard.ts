@@ -42,6 +42,15 @@ export class FeatureFlagGuard implements CanActivate {
     }
 
     // Fallback to DB query
+    const featureMeta = await this.prisma.feature.findUnique({
+      where: { key: requiredFeature },
+    });
+
+    if (featureMeta?.isCore) {
+      await this.redis.set(cacheKey, 'true', 300);
+      return true;
+    }
+
     const tf = await this.prisma.tenantFeature.findFirst({
       where: {
         tenantId,

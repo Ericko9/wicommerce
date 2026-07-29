@@ -11,6 +11,10 @@ export class AdjustInventoryDto {
   @IsNotEmpty()
   productId!: string;
 
+  @IsString()
+  @IsOptional()
+  variantId?: string;
+
   @IsEnum(InventoryAdjustmentType)
   type!: InventoryAdjustmentType;
 

@@ -6,6 +6,7 @@ import { ProductStatus } from '@ucp/database';
 
 export interface CartItem {
   productId: string;
+  variantId?: string;
   name: string;
   price: number;
   quantity: number;
@@ -53,6 +54,7 @@ export class CartService {
       },
       include: {
         images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+        variants: true,
       },
     });
 
@@ -60,19 +62,37 @@ export class CartService {
       throw new NotFoundException('Produk tidak ditemukan atau tidak aktif');
     }
 
+    let selectedVariant: any = null;
+    if (dto.variantId) {
+      selectedVariant = product.variants.find((v) => v.id === dto.variantId);
+      if (!selectedVariant) {
+        throw new NotFoundException(`Varian ID '${dto.variantId}' tidak ditemukan untuk produk '${product.name}'`);
+      }
+    }
+
+    const unitPrice =
+      selectedVariant?.price !== null && selectedVariant?.price !== undefined
+        ? selectedVariant.price
+        : product.basePrice;
+
+    const itemName = selectedVariant ? `${product.name} - ${selectedVariant.name}` : product.name;
+
     const cart = await this.getCart(tenantId, cartId);
-    const existingIndex = cart.items.findIndex((i) => i.productId === dto.productId);
+    const existingIndex = cart.items.findIndex(
+      (i) => i.productId === dto.productId && i.variantId === (dto.variantId || undefined),
+    );
 
     if (existingIndex >= 0) {
       cart.items[existingIndex].quantity += dto.quantity;
-      cart.items[existingIndex].subtotal = cart.items[existingIndex].quantity * product.basePrice;
+      cart.items[existingIndex].subtotal = cart.items[existingIndex].quantity * unitPrice;
     } else {
       cart.items.push({
         productId: product.id,
-        name: product.name,
-        price: product.basePrice,
+        variantId: selectedVariant?.id,
+        name: itemName,
+        price: unitPrice,
         quantity: dto.quantity,
-        subtotal: product.basePrice * dto.quantity,
+        subtotal: unitPrice * dto.quantity,
         imageUrl: product.images[0]?.url,
       });
     }
@@ -85,16 +105,21 @@ export class CartService {
     cartId: string,
     productId: string,
     quantity: number,
+    variantId?: string,
   ): Promise<Cart> {
     const cart = await this.getCart(tenantId, cartId);
-    const item = cart.items.find((i) => i.productId === productId);
+    const item = cart.items.find(
+      (i) => i.productId === productId && i.variantId === (variantId || undefined),
+    );
 
     if (!item) {
       throw new NotFoundException('Item tidak ada di keranjang');
     }
 
     if (quantity <= 0) {
-      cart.items = cart.items.filter((i) => i.productId !== productId);
+      cart.items = cart.items.filter(
+        (i) => !(i.productId === productId && i.variantId === (variantId || undefined)),
+      );
     } else {
       item.quantity = quantity;
       item.subtotal = item.quantity * item.price;
@@ -103,9 +128,16 @@ export class CartService {
     return this.saveCart(tenantId, cartId, cart);
   }
 
-  async removeItem(tenantId: string, cartId: string, productId: string): Promise<Cart> {
+  async removeItem(
+    tenantId: string,
+    cartId: string,
+    productId: string,
+    variantId?: string,
+  ): Promise<Cart> {
     const cart = await this.getCart(tenantId, cartId);
-    cart.items = cart.items.filter((i) => i.productId !== productId);
+    cart.items = cart.items.filter(
+      (i) => !(i.productId === productId && i.variantId === (variantId || undefined)),
+    );
     return this.saveCart(tenantId, cartId, cart);
   }
 

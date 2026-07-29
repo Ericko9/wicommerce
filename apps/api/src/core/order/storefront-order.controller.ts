@@ -41,10 +41,12 @@ export class StorefrontOrderController {
     @Param('productId') productId: string,
     @Headers('x-cart-id') cartId: string,
     @Body() dto: UpdateCartItemDto,
+    @Query('variantId') queryVariantId: string,
     @CurrentTenant() tenant: any,
   ) {
     const activeCartId = cartId || 'guest-session';
-    return this.cartService.updateItemQuantity(tenant?.id, activeCartId, productId, dto.quantity);
+    const variantId = dto.variantId || queryVariantId;
+    return this.cartService.updateItemQuantity(tenant?.id, activeCartId, productId, dto.quantity, variantId);
   }
 
   @Delete('cart/items/:productId')
@@ -52,10 +54,11 @@ export class StorefrontOrderController {
   async removeCartItem(
     @Param('productId') productId: string,
     @Headers('x-cart-id') cartId: string,
+    @Query('variantId') variantId: string,
     @CurrentTenant() tenant: any,
   ) {
     const activeCartId = cartId || 'guest-session';
-    return this.cartService.removeItem(tenant?.id, activeCartId, productId);
+    return this.cartService.removeItem(tenant?.id, activeCartId, productId, variantId);
   }
 
   @Post('checkout')

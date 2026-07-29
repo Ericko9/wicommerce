@@ -68,4 +68,29 @@ describe('InventoryService Unit Tests', () => {
       }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it('should adjust stock for specific variantId', async () => {
+    prisma.product.findFirst.mockResolvedValue({ id: 'p-1', tenantId: 'tenant-1' });
+    prisma.warehouse.findFirst.mockResolvedValue({ id: 'w-1', isDefault: true });
+    prisma.inventoryItem.findFirst.mockResolvedValue({ id: 'item-v1', variantId: 'v-1', quantity: 20 });
+    prisma.inventoryItem.update.mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: 'item-v1', variantId: 'v-1', quantity: data.quantity }),
+    );
+
+    const result = await service.adjustInventory('tenant-1', {
+      productId: 'p-1',
+      variantId: 'v-1',
+      type: InventoryAdjustmentType.OUT,
+      quantity: 5,
+    });
+
+    expect(result.quantity).toBe(15);
+    expect(prisma.inventoryItem.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          variantId: 'v-1',
+        }),
+      }),
+    );
+  });
 });

@@ -79,19 +79,30 @@ export class StorefrontCatalogService {
       ];
     }
 
-    const rawProducts = await this.prisma.product.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        category: true,
-        images: { orderBy: { sortOrder: 'asc' } },
-        inventoryItems: true,
-      },
-    });
+    if (settings?.hideWhenOutOfStock) {
+      where.inventoryItems = {
+        some: {
+          quantity: { gt: 0 },
+        },
+      };
+    }
 
-    let mapped = rawProducts.map((p) => {
+    const [rawProducts, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          category: true,
+          images: { orderBy: { sortOrder: 'asc' } },
+          inventoryItems: true,
+        },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    const mapped = rawProducts.map((p) => {
       const totalStock = p.inventoryItems.reduce((acc, item) => acc + item.quantity, 0);
       return {
         id: p.id,
@@ -106,17 +117,13 @@ export class StorefrontCatalogService {
       };
     });
 
-    if (settings?.hideWhenOutOfStock) {
-      mapped = mapped.filter((p) => p.totalStock > 0);
-    }
-
     return {
       items: mapped,
       meta: {
         page,
         limit,
-        total: mapped.length,
-        totalPages: Math.ceil(mapped.length / limit),
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }

@@ -6,7 +6,7 @@ import { AdjustInventoryDto, InventoryAdjustmentType } from './dto/adjust-invent
 export class InventoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getInventory(tenantId: string) {
+  async getInventory(tenantId: string): Promise<any> {
     const defaultWarehouse = await this.prisma.warehouse.findFirst({
       where: { tenantId, isDefault: true },
     });
@@ -30,12 +30,13 @@ export class InventoryService {
             status: true,
           },
         },
+        variant: true,
         warehouse: true,
       },
     });
   }
 
-  async adjustInventory(tenantId: string, dto: AdjustInventoryDto) {
+  async adjustInventory(tenantId: string, dto: AdjustInventoryDto): Promise<any> {
     const product = await this.prisma.product.findFirst({
       where: { id: dto.productId, tenantId, deletedAt: null },
     });
@@ -59,12 +60,14 @@ export class InventoryService {
     }
 
     const warehouseId = defaultWarehouse.id;
+    const targetVariantId = dto.variantId || null;
 
     return this.prisma.$transaction(async (tx) => {
       let item = await tx.inventoryItem.findFirst({
         where: {
           tenantId,
           productId: dto.productId,
+          variantId: targetVariantId,
           warehouseId,
         },
       });
@@ -74,6 +77,7 @@ export class InventoryService {
           data: {
             tenantId,
             productId: dto.productId,
+            variantId: targetVariantId,
             warehouseId,
             quantity: 0,
           },
@@ -102,6 +106,7 @@ export class InventoryService {
         data: { quantity: newQuantity },
         include: {
           product: true,
+          variant: true,
           warehouse: true,
         },
       });
