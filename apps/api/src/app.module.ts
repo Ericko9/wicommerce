@@ -13,6 +13,7 @@ import { FeatureFlagModule } from './core/feature-flag/feature-flag.module';
 import { CatalogModule } from './core/catalog/catalog.module';
 import { InventoryModule } from './core/inventory/inventory.module';
 import { StorefrontCatalogModule } from './core/storefront-catalog/storefront-catalog.module';
+import { JwtModule } from '@nestjs/jwt';
 import { CustomerAuthModule } from './core/customer-auth/customer-auth.module';
 import { OrderModule } from './core/order/order.module';
 import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.module';
@@ -22,6 +23,7 @@ import { PaymentGatewayModule } from './modules/payment-gateway/payment-gateway.
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    JwtModule.register({}),
     PrismaModule,
     RedisModule,
     S3Module,

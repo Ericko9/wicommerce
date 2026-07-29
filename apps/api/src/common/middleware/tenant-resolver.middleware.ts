@@ -1,32 +1,57 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TenantResolverMiddleware implements NestMiddleware {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
     const host = req.headers.host || '';
     const headerTenantId = req.headers['x-tenant-id'] as string;
+    const authHeader = req.headers['authorization'] as string;
 
     let tenant = null;
 
     if (headerTenantId) {
-      tenant = await this.prisma.tenant.findUnique({
-        where: { id: headerTenantId },
-        include: { settings: true },
-      });
-    } else if (host) {
-      const hostname = host.split(':')[0]; // Remove port
+      let isPlatformAdmin = false;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        try {
+          const secret =
+            this.configService.get<string>('JWT_ACCESS_SECRET') ||
+            'super-secret-access-token-key-change-in-prod';
+          const payload = this.jwtService.verify(token, { secret });
+          if (payload && payload.type === 'platform_admin') {
+            isPlatformAdmin = true;
+          }
+        } catch {
+          // Token invalid or expired -> ignore header x-tenant-id
+        }
+      }
 
-      // Check custom domain
+      if (isPlatformAdmin) {
+        tenant = await this.prisma.tenant.findUnique({
+          where: { id: headerTenantId },
+          include: { settings: true },
+        });
+      }
+    }
+
+    if (!tenant && host) {
+      const hostname = host.split(':')[0];
+
       tenant = await this.prisma.tenant.findUnique({
         where: { customDomain: hostname },
         include: { settings: true },
       });
 
-      // If not custom domain, resolve subdomain
       if (!tenant && hostname.includes('.')) {
         const parts = hostname.split('.');
         if (parts.length >= 2) {

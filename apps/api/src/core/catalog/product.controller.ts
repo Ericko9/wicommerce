@@ -37,7 +37,7 @@ export class AddImageDto {
 
 @ApiTags('Admin Catalog - Products')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
 @Controller('admin/products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
@@ -148,7 +148,6 @@ export class ProductController {
 
   @Get(':id/variants')
   @RequireFeature('product_variants')
-  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
   @Roles(TenantRole.OWNER, TenantRole.ADMIN, TenantRole.STAFF)
   @ApiOperation({ summary: 'Get list of product variants' })
   async getVariants(
@@ -162,7 +161,6 @@ export class ProductController {
 
   @Post(':id/variants')
   @RequireFeature('product_variants')
-  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
   @Roles(TenantRole.OWNER, TenantRole.ADMIN)
   @ApiOperation({ summary: 'Create new product variant' })
   async createVariant(
@@ -177,7 +175,6 @@ export class ProductController {
 
   @Patch(':id/variants/:variantId')
   @RequireFeature('product_variants')
-  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
   @Roles(TenantRole.OWNER, TenantRole.ADMIN)
   @ApiOperation({ summary: 'Update product variant' })
   async updateVariant(
@@ -193,7 +190,6 @@ export class ProductController {
 
   @Delete(':id/variants/:variantId')
   @RequireFeature('product_variants')
-  @UseGuards(JwtAuthGuard, FeatureFlagGuard, RolesGuard)
   @Roles(TenantRole.OWNER, TenantRole.ADMIN)
   @ApiOperation({ summary: 'Delete product variant' })
   async deleteVariant(

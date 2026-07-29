@@ -40,7 +40,7 @@ describe('PaymentGatewayService Unit Tests', () => {
 
   const mockConfig = {
     get: jest.fn((key: string) => {
-      if (key === 'JWT_ACCESS_SECRET') return mockSecret;
+      if (key === 'ENCRYPTION_SECRET_KEY' || key === 'JWT_ACCESS_SECRET') return mockSecret;
       return null;
     }),
   };

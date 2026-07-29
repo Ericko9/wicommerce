@@ -23,8 +23,8 @@ export class PaymentGatewayService {
 
   private getSecretKey(): string {
     return (
-      this.configService.get<string>('JWT_ACCESS_SECRET') ||
-      'super-secret-access-token-key-change-in-prod'
+      this.configService.get<string>('ENCRYPTION_SECRET_KEY') ||
+      'super-secret-encryption-key-for-db-at-rest'
     );
   }
 
