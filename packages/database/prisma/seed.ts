@@ -1,6 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, TenantRole, TenantStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Pre-computed bcrypt hash for 'password123'
+const DEFAULT_PASSWORD_HASH = '$2b$10$.dFsv109vopf5Kz.7X1ZYOmx9DjkcF1rbEMHfgrgH0zlqqEZfqDv.';
 
 async function main() {
   console.log('Seeding system features and plans...');
@@ -184,12 +187,116 @@ async function main() {
     create: {
       email: 'admin@ucp.local',
       name: 'Super Admin Platform',
-      // bcrypt hash for 'admin123'
-      passwordHash: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6L6532W.69u23wXW',
+      passwordHash: DEFAULT_PASSWORD_HASH,
     },
   });
 
-  console.log('Database seeding completed successfully!');
+  // 4. Default Demo Tenant & Owner User
+  const demoTenant = await prisma.tenant.upsert({
+    where: { subdomain: 'toko-berkah' },
+    update: {},
+    create: {
+      name: 'Toko Berkah UMKM',
+      subdomain: 'toko-berkah',
+      status: TenantStatus.ACTIVE,
+      plan: { connect: { key: 'pro' } },
+      settings: {
+        create: {
+          storeName: 'Toko Berkah UMKM',
+          themeColor: '#16a34a',
+        },
+      },
+    },
+  });
+
+  await prisma.tenantUser.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: demoTenant.id,
+        email: 'owner@toko-berkah.id',
+      },
+    },
+    update: {
+      passwordHash: DEFAULT_PASSWORD_HASH,
+    },
+    create: {
+      tenantId: demoTenant.id,
+      email: 'owner@toko-berkah.id',
+      name: 'Owner Toko Berkah',
+      role: TenantRole.OWNER,
+      passwordHash: DEFAULT_PASSWORD_HASH,
+    },
+  });
+
+  // Enable features for demo tenant
+  for (const [key, fId] of featuresMap.entries()) {
+    await prisma.tenantFeature.upsert({
+      where: {
+        tenantId_featureId: {
+          tenantId: demoTenant.id,
+          featureId: fId,
+        },
+      },
+      update: { isEnabled: true },
+      create: {
+        tenantId: demoTenant.id,
+        featureId: fId,
+        isEnabled: true,
+      },
+    });
+  }
+
+  // Create default warehouse & demo products
+  const warehouse = await prisma.warehouse.upsert({
+    where: { id: `wh-${demoTenant.id}` },
+    update: {},
+    create: {
+      id: `wh-${demoTenant.id}`,
+      tenantId: demoTenant.id,
+      name: 'Gudang Utama',
+      isDefault: true,
+    },
+  });
+
+  const category = await prisma.category.upsert({
+    where: { id: `cat-${demoTenant.id}` },
+    update: {},
+    create: {
+      id: `cat-${demoTenant.id}`,
+      tenantId: demoTenant.id,
+      name: 'Minuman Kopi Premium',
+      slug: 'minuman-kopi-premium',
+    },
+  });
+
+  const demoProduct = await prisma.product.upsert({
+    where: { id: `prod-${demoTenant.id}` },
+    update: {},
+    create: {
+      id: `prod-${demoTenant.id}`,
+      tenantId: demoTenant.id,
+      categoryId: category.id,
+      name: 'Kopi Susu Gula Aren',
+      slug: 'kopi-susu-gula-aren',
+      description: 'Kopi racikan espresso biji kopi Arabika dengan gula aren murni.',
+      basePrice: 15000,
+      status: 'ACTIVE',
+    },
+  });
+
+  await prisma.inventoryItem.upsert({
+    where: { id: `inv-${demoTenant.id}` },
+    update: { quantity: 100 },
+    create: {
+      id: `inv-${demoTenant.id}`,
+      tenantId: demoTenant.id,
+      productId: demoProduct.id,
+      warehouseId: warehouse.id,
+      quantity: 100,
+    },
+  });
+
+  console.log('Database seeding completed successfully with demo tenant & user owner@toko-berkah.id!');
 }
 
 main()
