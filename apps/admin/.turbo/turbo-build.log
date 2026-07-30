@@ -22,7 +22,7 @@ Route (app)                              Size     First Load JS
 ├ ○ /features                            5.05 kB         134 kB
 ├ ○ /inventory                           5.07 kB         135 kB
 ├ ○ /login                               25.6 kB         147 kB
-├ ○ /orders                              6.2 kB          136 kB
+├ ○ /orders                              6.54 kB         136 kB
 ├ ○ /products                            6.81 kB         136 kB
 └ ○ /settings                            4.89 kB         134 kB
 + First Load JS shared by all            87.3 kB

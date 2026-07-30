@@ -162,13 +162,21 @@ export default function OrderDetailPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <span className="text-slate-400 block mb-0.5">Penerima:</span>
-              <p className="font-bold text-slate-900">{order.customerName}</p>
-              <p className="text-slate-600">{order.customerPhone}</p>
+              <p className="font-bold text-slate-900">
+                {order.customerName || (typeof order.shippingAddress === 'object' ? order.shippingAddress?.recipient : 'Pelanggan')}
+              </p>
+              <p className="text-slate-600">
+                {order.customerPhone || (typeof order.shippingAddress === 'object' ? order.shippingAddress?.phone : '-')}
+              </p>
             </div>
 
             <div>
               <span className="text-slate-400 block mb-0.5">Alamat Pengiriman:</span>
-              <p className="text-slate-700 font-medium leading-relaxed">{order.shippingAddress}</p>
+              <p className="text-slate-700 font-medium leading-relaxed">
+                {typeof order.shippingAddress === 'object'
+                  ? `${order.shippingAddress?.fullAddress || ''}, ${order.shippingAddress?.city || ''}, ${order.shippingAddress?.province || ''} ${order.shippingAddress?.postalCode || ''}`
+                  : order.shippingAddress || '-'}
+              </p>
             </div>
           </div>
         </div>

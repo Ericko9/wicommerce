@@ -18,6 +18,7 @@ import {
   User,
   MapPin,
   FileText,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -187,14 +188,18 @@ export default function OrdersPage() {
                       </span>
                     </td>
                     <td className="p-3.5">
-                      <span className="font-bold text-slate-800 block">{order.customerName}</span>
-                      <span className="text-slate-500 text-[11px]">{order.customerPhone}</span>
+                      <span className="font-bold text-slate-800 block">
+                        {order.customerName || (typeof order.shippingAddress === 'object' ? order.shippingAddress?.recipient : 'Pelanggan')}
+                      </span>
+                      <span className="text-slate-500 text-[11px]">
+                        {order.customerPhone || (typeof order.shippingAddress === 'object' ? order.shippingAddress?.phone : '-')}
+                      </span>
                     </td>
                     <td className="p-3.5 font-medium text-slate-700 uppercase font-mono">
                       {order.paymentMethod}
                     </td>
                     <td className="p-3.5 font-bold text-slate-900 text-sm">
-                      Rp {order.totalAmount.toLocaleString('id-ID')}
+                      Rp {(order.totalAmount || 0).toLocaleString('id-ID')}
                     </td>
                     <td className="p-3.5">{getStatusBadge(order.status)}</td>
                     <td className="p-3.5 text-right">
@@ -218,14 +223,23 @@ export default function OrdersPage() {
       {selectedOrder && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 my-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <span className="text-xs text-slate-400 font-mono">ID: {selectedOrder.id}</span>
-                <h3 className="text-lg font-bold text-slate-900 font-mono">
-                  {selectedOrder.orderNumber}
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <span>Detail Pesanan:</span>
+                  <span className="font-mono text-emerald-600">{selectedOrder.orderNumber}</span>
                 </h3>
+                <p className="text-[11px] text-slate-400">
+                  Dibuat pada {new Date(selectedOrder.createdAt).toLocaleString('id-ID')}
+                </p>
               </div>
-              <div>{getStatusBadge(selectedOrder.status)}</div>
+
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Customer & Shipping Info */}
@@ -234,8 +248,12 @@ export default function OrdersPage() {
                 <div className="flex items-center gap-1.5 text-slate-500 font-semibold mb-1">
                   <User className="w-3.5 h-3.5" /> Info Pelanggan
                 </div>
-                <p className="font-bold text-slate-900">{selectedOrder.customerName}</p>
-                <p className="text-slate-600">{selectedOrder.customerPhone}</p>
+                <p className="font-bold text-slate-900">
+                  {selectedOrder.customerName || (typeof selectedOrder.shippingAddress === 'object' ? selectedOrder.shippingAddress?.recipient : 'Pelanggan')}
+                </p>
+                <p className="text-slate-600">
+                  {selectedOrder.customerPhone || (typeof selectedOrder.shippingAddress === 'object' ? selectedOrder.shippingAddress?.phone : '-')}
+                </p>
                 <p className="text-slate-600">{selectedOrder.customerEmail || '-'}</p>
               </div>
 
@@ -243,7 +261,11 @@ export default function OrdersPage() {
                 <div className="flex items-center gap-1.5 text-slate-500 font-semibold mb-1">
                   <MapPin className="w-3.5 h-3.5" /> Alamat Pengiriman
                 </div>
-                <p className="text-slate-700 leading-relaxed">{selectedOrder.shippingAddress}</p>
+                <p className="text-slate-700 leading-relaxed">
+                  {typeof selectedOrder.shippingAddress === 'object'
+                    ? `${selectedOrder.shippingAddress?.fullAddress || ''}, ${selectedOrder.shippingAddress?.city || ''}, ${selectedOrder.shippingAddress?.province || ''} ${selectedOrder.shippingAddress?.postalCode || ''}`
+                    : selectedOrder.shippingAddress || '-'}
+                </p>
               </div>
             </div>
 
@@ -253,19 +275,25 @@ export default function OrdersPage() {
                 Daftar Barang Belanja
               </h4>
               <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-                {selectedOrder.items?.map((item: any) => (
-                  <div key={item.id} className="p-3 flex items-center justify-between text-xs bg-white">
-                    <div>
-                      <span className="font-bold text-slate-900 block">{item.productName}</span>
-                      <span className="text-slate-500">
-                        {item.quantity} x Rp {item.price.toLocaleString('id-ID')}
+                {selectedOrder.items?.map((item: any) => {
+                  const price = item.priceSnapshot ?? item.price ?? 0;
+                  const name = item.productNameSnapshot || item.productName || item.product?.name || 'Produk';
+                  const subtotal = item.subtotal ?? (item.quantity * price);
+
+                  return (
+                    <div key={item.id} className="p-3 flex items-center justify-between text-xs bg-white">
+                      <div>
+                        <span className="font-bold text-slate-900 block">{name}</span>
+                        <span className="text-slate-500">
+                          {item.quantity} x Rp {price.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <span className="font-bold text-slate-900">
+                        Rp {subtotal.toLocaleString('id-ID')}
                       </span>
                     </div>
-                    <span className="font-bold text-slate-900">
-                      Rp {item.subtotal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
