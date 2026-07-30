@@ -53,29 +53,18 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const planFeatureIds = new Set(plan.features.map((pf) => pf.featureId));
 
-    // Execute tenant creation in interactive transaction
     const result = await this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
           name: dto.storeName,
           subdomain: cleanSubdomain,
-          status: TenantStatus.ACTIVE,
           planId: plan.id,
-        },
-      });
-
-      await tx.tenantSetting.create({
-        data: {
-          tenantId: tenant.id,
-          storeName: dto.storeName,
-        },
-      });
-
-      await tx.warehouse.create({
-        data: {
-          tenantId: tenant.id,
-          name: 'Gudang Utama',
-          isDefault: true,
+          status: TenantStatus.ACTIVE,
+          settings: {
+            create: {
+              storeName: dto.storeName,
+            },
+          },
         },
       });
 
@@ -142,7 +131,7 @@ export class AuthService {
 
     let tenantId = currentTenantId;
 
-    if (!tenantId && dto.subdomain) {
+    if (dto.subdomain) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { subdomain: dto.subdomain },
       });
@@ -162,7 +151,9 @@ export class AuthService {
           },
         },
       });
-    } else {
+    }
+
+    if (!user) {
       user = await this.prisma.tenantUser.findFirst({
         where: { email: cleanEmail },
       });
@@ -180,6 +171,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.tenantId, user.role);
 
     return {
+      message: 'Login berhasil',
       user: {
         id: user.id,
         name: user.name,
@@ -191,7 +183,37 @@ export class AuthService {
     };
   }
 
-  async generateTokens(userId: string, email: string, tenantId: string, role: string) {
+  async refreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token tidak ditemukan');
+    }
+
+    try {
+      const secret =
+        this.configService.get<string>('JWT_REFRESH_SECRET') ||
+        'super-secret-refresh-token-key-change-in-prod';
+      const payload = this.jwtService.verify(refreshToken, { secret });
+
+      const user = await this.prisma.tenantUser.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException('User tidak aktif atau tidak ditemukan');
+      }
+
+      return this.generateTokens(user.id, user.email, user.tenantId, user.role);
+    } catch {
+      throw new UnauthorizedException('Refresh token tidak valid atau kadaluarsa');
+    }
+  }
+
+  private async generateTokens(
+    userId: string,
+    email: string,
+    tenantId: string,
+    role: TenantRole,
+  ) {
     const payload = { sub: userId, email, tenantId, role };
 
     const accessSecret =
@@ -201,12 +223,12 @@ export class AuthService {
       this.configService.get<string>('JWT_REFRESH_SECRET') ||
       'super-secret-refresh-token-key-change-in-prod';
 
-    const accessToken = await this.jwtService.signAsync(payload, {
+    const accessToken = this.jwtService.sign(payload, {
       secret: accessSecret,
       expiresIn: '15m',
     });
 
-    const refreshToken = await this.jwtService.signAsync(payload, {
+    const refreshToken = this.jwtService.sign(payload, {
       secret: refreshSecret,
       expiresIn: '7d',
     });
@@ -214,22 +236,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 900,
+      expiresIn: 900, // 15 mins
     };
-  }
-
-  async refreshToken(token: string) {
-    try {
-      const refreshSecret =
-        this.configService.get<string>('JWT_REFRESH_SECRET') ||
-        'super-secret-refresh-token-key-change-in-prod';
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: refreshSecret,
-      });
-
-      return this.generateTokens(payload.sub, payload.email, payload.tenantId, payload.role);
-    } catch {
-      throw new UnauthorizedException('Refresh token tidak valid atau kedaluwarsa');
-    }
   }
 }

@@ -17,6 +17,11 @@ storefrontApiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
+      const tenantId = localStorage.getItem('tenant_id');
+      if (tenantId) {
+        config.headers['x-tenant-id'] = tenantId;
+      }
+
       const cartId = localStorage.getItem('guest_cart_id') || 'guest-session';
       config.headers['x-cart-id'] = cartId;
     }

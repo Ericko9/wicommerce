@@ -20,27 +20,27 @@ export class TenantResolverMiddleware implements NestMiddleware {
     let tenant = null;
 
     if (headerTenantId) {
-      let isPlatformAdmin = false;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        try {
-          const secret =
-            this.configService.get<string>('JWT_ACCESS_SECRET') ||
-            'super-secret-access-token-key-change-in-prod';
-          const payload = this.jwtService.verify(token, { secret });
-          if (payload && payload.type === 'platform_admin') {
-            isPlatformAdmin = true;
-          }
-        } catch {
-          // Token invalid or expired -> ignore header x-tenant-id
-        }
-      }
+      tenant = await this.prisma.tenant.findUnique({
+        where: { id: headerTenantId },
+        include: { settings: true },
+      });
+    }
 
-      if (isPlatformAdmin) {
-        tenant = await this.prisma.tenant.findUnique({
-          where: { id: headerTenantId },
-          include: { settings: true },
-        });
+    if (!tenant && authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const secret =
+          this.configService.get<string>('JWT_ACCESS_SECRET') ||
+          'super-secret-access-token-key-change-in-prod';
+        const payload = this.jwtService.verify(token, { secret });
+        if (payload && payload.tenantId) {
+          tenant = await this.prisma.tenant.findUnique({
+            where: { id: payload.tenantId },
+            include: { settings: true },
+          });
+        }
+      } catch {
+        // Token invalid or expired
       }
     }
 
@@ -64,6 +64,13 @@ export class TenantResolverMiddleware implements NestMiddleware {
           }
         }
       }
+    }
+
+    if (!tenant) {
+      tenant = await this.prisma.tenant.findFirst({
+        where: { status: 'ACTIVE' },
+        include: { settings: true },
+      });
     }
 
     (req as any).tenant = tenant;
