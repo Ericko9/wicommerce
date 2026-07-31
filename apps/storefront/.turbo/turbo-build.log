@@ -6,17 +6,20 @@ $ next build
  ✓ Compiled successfully
    Linting and checking validity of types     ✓ Linting and checking validity of types 
    Collecting page data     ✓ Collecting page data 
- ✓ Generating static pages (6/6)
+ ✓ Generating static pages (9/9)
    Collecting build traces     ✓ Collecting build traces 
    Finalizing page optimization     ✓ Finalizing page optimization 
 
 Route (app)                              Size     First Load JS
-┌ ○ /                                    3.14 kB         132 kB
+┌ ○ /                                    3.22 kB         132 kB
 ├ ○ /_not-found                          871 B          88.2 kB
-├ ○ /cart                                4.5 kB          142 kB
-├ ○ /checkout                            5.31 kB         134 kB
+├ ○ /account                             3.08 kB         141 kB
+├ ○ /cart                                4.57 kB         143 kB
+├ ○ /checkout                            5.32 kB         135 kB
+├ ○ /login                               2.28 kB         155 kB
 ├ ƒ /orders/[id]                         3.08 kB        99.6 kB
-└ ƒ /products/[slug]                     5.19 kB         134 kB
+├ ƒ /products/[slug]                     5.19 kB         135 kB
+└ ○ /register                            2.41 kB         156 kB
 + First Load JS shared by all            87.3 kB
   ├ chunks/513-3efbc5535df6534f.js       31.7 kB
   ├ chunks/6f1030b3-6ea1cc437aaa43fd.js  53.6 kB

@@ -3,11 +3,6 @@ $ next build
   - Environments: .env.local
 
    Creating an optimized production build ...
-
-warn - Your `content` configuration includes a pattern which looks like it's accidentally matching all of `node_modules` and can cause serious performance issues.
-warn - Pattern: `../../packages/ui/**/*.js`
-warn - See our documentation for recommendations:
-warn - https://tailwindcss.com/docs/content-configuration#pattern-recommendations
  ✓ Compiled successfully
    Linting and checking validity of types     ✓ Linting and checking validity of types 
    Collecting page data     ✓ Collecting page data 
