@@ -34,8 +34,8 @@ export default function CustomerLoginPage() {
     try {
       const res: any = await storefrontApiClient.post('/storefront/auth/login', values);
       const data = res.data || res;
-      const accessToken = data.tokens?.accessToken || data.accessToken;
-      const user = data.user || {};
+      const accessToken = data.token || data.tokens?.accessToken || data.accessToken;
+      const user = data.customer || data.user || {};
 
       if (accessToken) {
         localStorage.setItem('customer_token', accessToken);
