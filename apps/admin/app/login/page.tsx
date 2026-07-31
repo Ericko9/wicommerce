@@ -37,12 +37,14 @@ export default function LoginPage() {
     try {
       const res: any = await apiClient.post('/auth/login', values);
       const data = res.data || res;
+      const accessToken = data.tokens?.accessToken || data.accessToken;
+      const user = data.user || {};
 
-      if (data.accessToken) {
-        localStorage.setItem('admin_token', data.accessToken);
-        localStorage.setItem('admin_user', JSON.stringify(data.user || {}));
-        if (data.user?.tenantId) {
-          localStorage.setItem('admin_tenant_id', data.user.tenantId);
+      if (accessToken) {
+        localStorage.setItem('admin_token', accessToken);
+        localStorage.setItem('admin_user', JSON.stringify(user));
+        if (user.tenantId) {
+          localStorage.setItem('admin_tenant_id', user.tenantId);
         }
 
         toast.success('Login Berhasil! Selamat datang di Panel Admin.');
