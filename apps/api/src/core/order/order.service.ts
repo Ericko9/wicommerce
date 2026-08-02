@@ -111,18 +111,59 @@ export class OrderService {
           if (!selectedVariant) {
             throw new NotFoundException(`Varian ID '${itemDto.variantId}' tidak ditemukan untuk produk '${product.name}'`);
           }
-        } else {
-          selectedVariant = product.variants[0] || null;
         }
 
-        const inv = await tx.inventoryItem.findFirst({
+        // 1. Primary lookup: Exact match for variantId or null
+        let inv = await tx.inventoryItem.findFirst({
           where: {
             tenantId,
             productId: product.id,
-            variantId: selectedVariant?.id || null,
+            variantId: itemDto.variantId || selectedVariant?.id || null,
             warehouseId,
           },
         });
+
+        // 2. Fallback A: If variant stock is insufficient or missing, check base product stock (variantId: null)
+        if (!inv || inv.quantity < itemDto.quantity) {
+          const baseInv = await tx.inventoryItem.findFirst({
+            where: {
+              tenantId,
+              productId: product.id,
+              variantId: null,
+              warehouseId,
+            },
+          });
+          if (baseInv && baseInv.quantity >= itemDto.quantity) {
+            inv = baseInv;
+          }
+        }
+
+        // 3. Fallback B: If still insufficient stock, check ANY inventory item for this product in default warehouse with sufficient stock
+        if (!inv || inv.quantity < itemDto.quantity) {
+          const anyInv = await tx.inventoryItem.findFirst({
+            where: {
+              tenantId,
+              productId: product.id,
+              warehouseId,
+              quantity: { gte: itemDto.quantity },
+            },
+          });
+          if (anyInv) {
+            inv = anyInv;
+          }
+        }
+
+        // 4. Fallback C: Pick the inventory record for this product with highest quantity
+        if (!inv) {
+          inv = await tx.inventoryItem.findFirst({
+            where: {
+              tenantId,
+              productId: product.id,
+              warehouseId,
+            },
+            orderBy: { quantity: 'desc' },
+          });
+        }
 
         const currentStock = inv ? inv.quantity : 0;
         if (currentStock < itemDto.quantity) {
@@ -144,7 +185,7 @@ export class OrderService {
 
         orderItemsData.push({
           productId: product.id,
-          variantId: selectedVariant?.id || null,
+          variantId: selectedVariant?.id || inv?.variantId || null,
           productNameSnapshot,
           priceSnapshot: unitPrice,
           quantity: itemDto.quantity,
@@ -152,10 +193,12 @@ export class OrderService {
         });
 
         // Decrement stock atomically
-        await tx.inventoryItem.update({
-          where: { id: inv!.id },
-          data: { quantity: currentStock - itemDto.quantity },
-        });
+        if (inv) {
+          await tx.inventoryItem.update({
+            where: { id: inv.id },
+            data: { quantity: currentStock - itemDto.quantity },
+          });
+        }
       }
 
       const totalAmount = subtotal; // manual shipping cost defaults to 0 in core
