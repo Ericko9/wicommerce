@@ -17,6 +17,10 @@ import {
   Loader2,
   PackageCheck,
   PackageX,
+  AlertTriangle,
+  X,
+  Tag,
+  DollarSign,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,15 +32,25 @@ export default function ProductsPage() {
 
   const { isEnabled: hasVariants } = useFeature('product_variants');
 
-  // Form State
+  // Form & Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [deletingProduct, setDeletingProduct] = useState<any>(null);
+  const [managingVariantsProduct, setManagingVariantsProduct] = useState<any>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     basePrice: 0,
     status: 'ACTIVE',
     categoryId: '',
+  });
+
+  // Variant Form State inside Variant Modal
+  const [variantForm, setVariantForm] = useState({
+    name: '',
+    sku: '',
+    price: 15000,
   });
 
   const { data: productsData, isLoading } = useQuery({
@@ -56,6 +70,17 @@ export default function ProductsPage() {
       const res: any = await apiClient.get('/admin/categories');
       return res.data || res;
     },
+  });
+
+  // Query details for current managingVariantsProduct
+  const { data: selectedProductDetails, refetch: refetchProductDetails } = useQuery({
+    queryKey: ['product_details', managingVariantsProduct?.id],
+    queryFn: async () => {
+      if (!managingVariantsProduct?.id) return null;
+      const res: any = await apiClient.get(`/admin/products/${managingVariantsProduct.id}`);
+      return res.data || res;
+    },
+    enabled: !!managingVariantsProduct?.id,
   });
 
   const saveMutation = useMutation({
@@ -82,6 +107,39 @@ export default function ProductsPage() {
     onSuccess: () => {
       toast.success('Produk berhasil dihapus');
       queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      setDeletingProduct(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Gagal menghapus produk');
+    },
+  });
+
+  const addVariantMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      return apiClient.post(`/admin/products/${managingVariantsProduct.id}/variants`, payload);
+    },
+    onSuccess: () => {
+      toast.success('Varian produk baru berhasil ditambahkan!');
+      refetchProductDetails();
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      setVariantForm({ name: '', sku: '', price: 15000 });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Gagal menambahkan varian produk');
+    },
+  });
+
+  const deleteVariantMutation = useMutation({
+    mutationFn: async (variantId: string) => {
+      return apiClient.delete(`/admin/products/${managingVariantsProduct.id}/variants/${variantId}`);
+    },
+    onSuccess: () => {
+      toast.success('Varian berhasil dihapus');
+      refetchProductDetails();
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Gagal menghapus varian');
     },
   });
 
@@ -122,6 +180,15 @@ export default function ProductsPage() {
       basePrice: Number(formData.basePrice),
       status: formData.status,
       categoryId: formData.categoryId || undefined,
+    });
+  };
+
+  const handleAddVariantSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addVariantMutation.mutate({
+      name: variantForm.name,
+      sku: variantForm.sku || `SKU-${Date.now()}`,
+      price: Number(variantForm.price),
     });
   };
 
@@ -181,16 +248,22 @@ export default function ProductsPage() {
         ) : productsData?.items?.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center space-y-3">
             <ShoppingBag className="w-12 h-12 text-slate-300" />
-            <h3 className="text-base font-bold text-slate-800">Belum Ada Produk</h3>
+            <h3 className="text-base font-bold text-slate-800">
+              {search ? 'Produk Tidak Ditemukan' : 'Belum Ada Produk'}
+            </h3>
             <p className="text-xs text-slate-500 max-w-sm">
-              Toko Anda belum memiliki produk. Klik tombol di bawah untuk menambah produk pertama Anda.
+              {search
+                ? `Tidak ada produk yang cocok dengan pencarian "${search}". Coba kata kunci lain.`
+                : 'Toko Anda belum memiliki produk. Klik tombol di bawah untuk menambah produk pertama Anda.'}
             </p>
-            <button
-              onClick={handleOpenCreate}
-              className="text-xs font-semibold px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              Tambah Produk Pertama
-            </button>
+            {!search && (
+              <button
+                onClick={handleOpenCreate}
+                className="text-xs font-semibold px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Tambah Produk Pertama
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -259,9 +332,10 @@ export default function ProductsPage() {
                       <td className="p-3.5 text-right space-x-2">
                         {hasVariants && (
                           <button
-                            onClick={() => toast.info(`Fitur Varian Produk ID '${product.id}' aktif`)}
+                            onClick={() => setManagingVariantsProduct(product)}
                             className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Kelola Varian & SKU"
+                            aria-label="Kelola Varian & SKU"
                           >
                             <Layers className="w-4 h-4" />
                           </button>
@@ -270,17 +344,15 @@ export default function ProductsPage() {
                           onClick={() => handleOpenEdit(product)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Edit Produk"
+                          aria-label="Edit Produk"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Hapus produk '${product.name}'?`)) {
-                              deleteMutation.mutate(product.id);
-                            }
-                          }}
+                          onClick={() => setDeletingProduct(product)}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Hapus Produk"
+                          aria-label="Hapus Produk"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -294,13 +366,21 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Create / Edit Modal */}
+      {/* Create / Edit Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900">
-              {editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}
-            </h3>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -387,6 +467,161 @@ export default function ProductsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Variant & SKU Management Modal */}
+      {managingVariantsProduct && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-emerald-600" />
+                  <span>Kelola Varian & SKU Produk</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Produk: <strong className="text-slate-900">{managingVariantsProduct.name}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setManagingVariantsProduct(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List Existing Variants */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Daftar Varian Aktif
+              </h4>
+
+              {selectedProductDetails?.variants?.length === 0 ? (
+                <div className="bg-slate-50 p-4 rounded-xl text-center text-xs text-slate-500 border border-slate-200">
+                  Belum ada varian spesifik untuk produk ini.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                  {selectedProductDetails?.variants?.map((v: any) => (
+                    <div key={v.id} className="p-3 flex items-center justify-between text-xs bg-white">
+                      <div>
+                        <span className="font-bold text-slate-900 block">{v.name}</span>
+                        <span className="text-[11px] text-slate-400 font-mono">SKU: {v.sku}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold text-slate-900">
+                          {v.price ? `Rp ${v.price.toLocaleString('id-ID')}` : 'Harga Dasar'}
+                        </span>
+                        <button
+                          onClick={() => deleteVariantMutation.mutate(v.id)}
+                          disabled={deleteVariantMutation.isPending}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Hapus Varian"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Add New Variant Form */}
+            <form onSubmit={handleAddVariantSubmit} className="space-y-3 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+              <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-emerald-600" />
+                <span>Tambah Varian Baru</span>
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Nama Varian</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Misal: Size L (500ml)"
+                    value={variantForm.name}
+                    onChange={(e) => setVariantForm({ ...variantForm, name: e.target.value })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Kode SKU</label>
+                  <input
+                    type="text"
+                    placeholder="Auto / SKU-123"
+                    value={variantForm.sku}
+                    onChange={(e) => setVariantForm({ ...variantForm, sku: e.target.value })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 bg-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Harga (Rp)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={variantForm.price}
+                    onChange={(e) => setVariantForm({ ...variantForm, price: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  disabled={addVariantMutation.isPending}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors shadow-md shadow-emerald-600/30 flex items-center gap-1.5"
+                >
+                  {addVariantMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Simpan Varian</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingProduct && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-200 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900">Konfirmasi Hapus Produk</h3>
+              <p className="text-xs text-slate-500">
+                Apakah Anda yakin ingin menghapus produk <strong className="text-slate-800">&quot;{deletingProduct.name}&quot;</strong>?
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingProduct(null)}
+                className="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(deletingProduct.id)}
+                className="px-4 py-2 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors shadow-md shadow-red-600/30 flex items-center gap-1.5"
+              >
+                {deleteMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Ya, Hapus Produk</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -13,12 +13,12 @@ $ next build
 Route (app)                              Size     First Load JS
 ┌ ○ /                                    2.61 kB         132 kB
 ├ ○ /_not-found                          871 B          88.2 kB
-├ ○ /categories                          4.7 kB          134 kB
+├ ○ /categories                          5.09 kB         135 kB
 ├ ○ /features                            5.05 kB         134 kB
 ├ ○ /inventory                           5.07 kB         135 kB
 ├ ○ /login                               25.6 kB         147 kB
 ├ ○ /orders                              6.54 kB         136 kB
-├ ○ /products                            6.81 kB         136 kB
+├ ○ /products                            7.97 kB         137 kB
 └ ○ /settings                            4.89 kB         134 kB
 + First Load JS shared by all            87.3 kB
   ├ chunks/513-3efbc5535df6534f.js       31.7 kB
