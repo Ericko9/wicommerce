@@ -37,6 +37,7 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingProduct, setDeletingProduct] = useState<any>(null);
   const [managingVariantsProduct, setManagingVariantsProduct] = useState<any>(null);
+  const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -515,14 +516,36 @@ export default function ProductsPage() {
                         <span className="font-bold text-slate-900">
                           {v.price ? `Rp ${v.price.toLocaleString('id-ID')}` : 'Harga Dasar'}
                         </span>
-                        <button
-                          onClick={() => deleteVariantMutation.mutate(v.id)}
-                          disabled={deleteVariantMutation.isPending}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Hapus Varian"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {deletingVariantId === v.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                deleteVariantMutation.mutate(v.id);
+                                setDeletingVariantId(null);
+                              }}
+                              disabled={deleteVariantMutation.isPending}
+                              className="px-2 py-1 bg-red-600 text-white font-bold text-[10px] rounded hover:bg-red-700 transition-colors flex items-center gap-1"
+                            >
+                              {deleteVariantMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                              <span>Hapus?</span>
+                            </button>
+                            <button
+                              onClick={() => setDeletingVariantId(null)}
+                              className="px-2 py-1 bg-slate-200 text-slate-700 font-semibold text-[10px] rounded hover:bg-slate-300 transition-colors"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeletingVariantId(v.id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hapus Varian"
+                            aria-label="Hapus Varian"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
