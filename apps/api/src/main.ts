@@ -14,6 +14,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.setGlobalPrefix('api');
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
 
   app.useGlobalPipes(
     new ValidationPipe({

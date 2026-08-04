@@ -108,8 +108,9 @@ export class ProductService {
   }
 
   async getProducts(tenantId: string, query: ProductQueryDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Math.max(1, query.page || 1);
+    const rawLimit = query.limit || 20;
+    const limit = Math.min(Math.max(1, Number(rawLimit)), 100);
     const skip = (page - 1) * limit;
 
     const where: any = {

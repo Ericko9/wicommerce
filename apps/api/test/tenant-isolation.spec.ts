@@ -77,4 +77,36 @@ describe('Tenant Isolation & Prisma Extension Unit Test', () => {
       where: { key: 'basic' },
     });
   });
+
+  it('should block cross-tenant header spoofing in TenantResolverMiddleware', async () => {
+    const { TenantResolverMiddleware } = require('../src/common/middleware/tenant-resolver.middleware');
+    const { ForbiddenException } = require('@nestjs/common');
+
+    const mockPrismaService = {
+      tenant: { findUnique: jest.fn(), findFirst: jest.fn() },
+    };
+    const mockConfigService = {
+      get: jest.fn().mockReturnValue('super-secret-access-token-key-change-in-prod'),
+    };
+    const mockJwtService = {
+      verify: jest.fn().mockReturnValue({ tenantId: 'poc-tenant-id' }),
+    };
+
+    const middleware = new TenantResolverMiddleware(
+      mockPrismaService as any,
+      mockConfigService as any,
+      mockJwtService as any,
+    );
+
+    const req: any = {
+      headers: {
+        'x-tenant-id': 'victim-toko-berkah-id',
+        authorization: 'Bearer valid-jwt-token-for-poc-tenant',
+      },
+    };
+    const res: any = {};
+    const next = jest.fn();
+
+    await expect(middleware.use(req, res, next)).rejects.toThrow(ForbiddenException);
+  });
 });

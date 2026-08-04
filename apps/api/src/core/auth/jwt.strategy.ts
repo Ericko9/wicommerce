@@ -35,6 +35,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User account inactive or not found');
     }
 
+    if (user.tenantId !== payload.tenantId) {
+      throw new UnauthorizedException('Tenant isolation violation: user does not belong to token tenant');
+    }
+
     return {
       id: user.id,
       email: user.email,

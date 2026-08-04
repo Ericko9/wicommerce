@@ -192,12 +192,23 @@ export class OrderService {
           subtotal: itemSubtotal,
         });
 
-        // Decrement stock atomically
+        // Decrement stock atomically with concurrency protection
         if (inv) {
-          await tx.inventoryItem.update({
-            where: { id: inv.id },
-            data: { quantity: currentStock - itemDto.quantity },
+          const updatedInv = await tx.inventoryItem.updateMany({
+            where: {
+              id: inv.id,
+              quantity: { gte: itemDto.quantity },
+            },
+            data: {
+              quantity: { decrement: itemDto.quantity },
+            },
           });
+
+          if (updatedInv.count === 0) {
+            throw new BadRequestException(
+              `Stok untuk produk '${product.name}' tidak mencukupi atau telah berubah saat transaksi (Tersedia: ${currentStock}, Diminta: ${itemDto.quantity})`,
+            );
+          }
         }
       }
 
@@ -269,8 +280,9 @@ export class OrderService {
   }
 
   async getAdminOrders(tenantId: string, query: OrderQueryDto): Promise<any> {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Math.max(1, query.page || 1);
+    const rawLimit = query.limit || 20;
+    const limit = Math.min(Math.max(1, Number(rawLimit)), 100);
     const skip = (page - 1) * limit;
 
     const where: any = { tenantId };

@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { Injectable, NestMiddleware, ForbiddenException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -17,16 +17,9 @@ export class TenantResolverMiddleware implements NestMiddleware {
     const headerTenantId = req.headers['x-tenant-id'] as string;
     const authHeader = req.headers['authorization'] as string;
 
-    let tenant = null;
+    let jwtTenantId: string | null = null;
 
-    if (headerTenantId) {
-      tenant = await this.prisma.tenant.findUnique({
-        where: { id: headerTenantId },
-        include: { settings: true },
-      });
-    }
-
-    if (!tenant && authHeader && authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       try {
         const secret =
@@ -34,14 +27,29 @@ export class TenantResolverMiddleware implements NestMiddleware {
           'super-secret-access-token-key-change-in-prod';
         const payload = this.jwtService.verify(token, { secret });
         if (payload && payload.tenantId) {
-          tenant = await this.prisma.tenant.findUnique({
-            where: { id: payload.tenantId },
-            include: { settings: true },
-          });
+          jwtTenantId = payload.tenantId;
         }
       } catch {
-        // Token invalid or expired
+        // Invalid or expired token
       }
+    }
+
+    // STRICT TENANT ISOLATION CHECK:
+    // If request has JWT with tenantId AND header x-tenant-id, they MUST match!
+    if (jwtTenantId && headerTenantId && headerTenantId !== jwtTenantId) {
+      throw new ForbiddenException(
+        'Cross-tenant access prohibited: JWT tenantId does not match X-Tenant-Id header',
+      );
+    }
+
+    let tenant = null;
+    const resolvedTenantId = jwtTenantId || headerTenantId;
+
+    if (resolvedTenantId) {
+      tenant = await this.prisma.tenant.findUnique({
+        where: { id: resolvedTenantId },
+        include: { settings: true },
+      });
     }
 
     if (!tenant && host) {

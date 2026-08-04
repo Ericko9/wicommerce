@@ -106,13 +106,24 @@ describe('PaymentGatewayService Unit Tests', () => {
       id: 'ord-1',
       tenantId: 'tenant-1',
       orderNumber: 'ORD-1001',
+      totalAmount: 50000,
       payment: { status: 'SUCCESS' },
     });
+
+    const encryptedConfig = encryptConfig({ serverKey: 'REAL-SERVER-KEY' }, mockSecret);
+    prisma.tenantFeature.findFirst.mockResolvedValue({
+      isEnabled: true,
+      config: encryptedConfig,
+    });
+
+    const payloadString = 'ORD-100120050000.00REAL-SERVER-KEY';
+    const validSignature = require('crypto').createHash('sha512').update(payloadString).digest('hex');
 
     const payload = {
       order_id: 'ORD-1001',
       status_code: '200',
       gross_amount: '50000.00',
+      signature_key: validSignature,
       transaction_status: 'settlement',
     };
 

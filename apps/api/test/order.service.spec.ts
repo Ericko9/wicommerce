@@ -35,6 +35,7 @@ describe('OrderService Unit Tests', () => {
     inventoryItem: {
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     order: {
       create: jest.fn(),
@@ -110,9 +111,9 @@ describe('OrderService Unit Tests', () => {
     });
 
     expect(result.order.totalAmount).toBe(40000);
-    expect(prisma.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: 'inv-1' },
-      data: { quantity: 8 },
+    expect(prisma.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: { id: 'inv-1', quantity: { gte: 2 } },
+      data: { quantity: { decrement: 2 } },
     });
   });
 

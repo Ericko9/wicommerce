@@ -146,14 +146,27 @@ export class PaymentGatewayService {
     }
 
     const config = await this.getGatewayConfig<MidtransConfigDto>(order.tenantId, 'payment_midtrans');
-    if (config) {
-      const grossAmountStr = typeof gross_amount === 'number' ? gross_amount.toFixed(2) : gross_amount;
-      const payloadString = `${order_id}${status_code}${grossAmountStr}${config.serverKey}`;
-      const expectedSignature = crypto.createHash('sha512').update(payloadString).digest('hex');
+    if (!config || !config.serverKey) {
+      throw new UnauthorizedException('Kredensial Midtrans belum dikonfigurasi untuk toko ini');
+    }
 
-      if (signature_key && signature_key !== expectedSignature) {
-        throw new UnauthorizedException('Signature Key Midtrans tidak valid');
-      }
+    if (!signature_key) {
+      throw new UnauthorizedException('Signature key wajib disertakan dalam webhook Midtrans');
+    }
+
+    const grossAmountNum = Number(gross_amount);
+    const expectedGrossAmountStr = typeof gross_amount === 'number' ? gross_amount.toFixed(2) : String(gross_amount);
+    const payloadString = `${order_id}${status_code}${expectedGrossAmountStr}${config.serverKey}`;
+    const expectedSignature = crypto.createHash('sha512').update(payloadString).digest('hex');
+
+    if (signature_key !== expectedSignature) {
+      throw new UnauthorizedException('Signature Key Midtrans tidak valid');
+    }
+
+    if (Math.abs(grossAmountNum - Number(order.totalAmount)) > 0.01) {
+      throw new BadRequestException(
+        `Jumlah pembayaran webhook (${grossAmountNum}) tidak sesuai dengan total tagihan order (${order.totalAmount})`,
+      );
     }
 
     // Idempotency check: if payment already SUCCESS, return early
