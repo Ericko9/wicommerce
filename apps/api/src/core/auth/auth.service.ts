@@ -26,6 +26,8 @@ export class AuthService {
   ) {}
 
   async registerTenant(dto: RegisterTenantDto) {
+    const cleanStoreName = dto.storeName.replace(/<[^>]*>/g, '').trim();
+    const cleanOwnerName = dto.ownerName.replace(/<[^>]*>/g, '').trim();
     const cleanSubdomain = dto.subdomain.toLowerCase().trim();
 
     if (RESERVED_SUBDOMAINS.includes(cleanSubdomain)) {
@@ -56,13 +58,13 @@ export class AuthService {
     const result = await this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
-          name: dto.storeName,
+          name: cleanStoreName,
           subdomain: cleanSubdomain,
           planId: plan.id,
           status: TenantStatus.ACTIVE,
           settings: {
             create: {
-              storeName: dto.storeName,
+              storeName: cleanStoreName,
             },
           },
         },
@@ -71,7 +73,7 @@ export class AuthService {
       const owner = await tx.tenantUser.create({
         data: {
           tenantId: tenant.id,
-          name: dto.ownerName,
+          name: cleanOwnerName,
           email: dto.ownerEmail.toLowerCase().trim(),
           passwordHash,
           role: TenantRole.OWNER,

@@ -27,8 +27,8 @@ export default function LoginPage() {
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'owner@toko-berkah.id',
-      password: 'password123',
+      email: '',
+      password: '',
     },
   });
 
